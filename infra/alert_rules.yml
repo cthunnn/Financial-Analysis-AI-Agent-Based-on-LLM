@@ -1,0 +1,48 @@
+groups:
+  - name: llm_alerts
+    rules:
+      - alert: LLMHighErrorRate
+        expr: rate(llm_calls_total{success="false"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM 调用错误率超过 10%"
+          description: "最近 5 分钟 LLM 调用错误率已超过 10%，请检查 LLM API 服务状态。"
+
+      - alert: LLMHighLatency
+        expr: histogram_quantile(0.95, rate(llm_latency_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM 响应延迟 P95 超过 30 秒"
+          description: "LLM 接口 P95 延迟超过 30 秒，可能影响用户体验。"
+
+      - alert: LLMHighCost
+        expr: increase(llm_cost_usd_total[1h]) > 100
+        labels:
+          severity: critical
+        annotations:
+          summary: "LLM 调用成本单小时超过 $100"
+          description: "LLM 调用成本异常增长，请检查是否有异常调用或模型配置问题。"
+
+  - name: service_alerts
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "服务 {{ $labels.job }} 不可用"
+          description: "服务 {{ $labels.job }} 已停止响应超过 1 分钟。"
+
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / 1024 / 1024 / 1024 > 4
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "内存使用超过 4GB"
+          description: "服务内存使用已超过 4GB，请检查是否存在内存泄漏。"
